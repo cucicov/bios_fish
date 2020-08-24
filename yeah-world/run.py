@@ -28,6 +28,7 @@ import unicornhat as uh
 import random
 import time
 import math
+import logging
 
 # Smooth out spikes in predictions but increase apparent latency. Decrease on a Pi Zero.
 #SMOOTH_FACTOR = 0.8
@@ -38,13 +39,9 @@ def main():
     uh.set_layout(uh.PHAT)
     uh.brightness(1)
     #------
-    
-    if len(argv) != 2 or argv[1] == '--help':
-        print("""Usage: run.py MODEL Use MODEL to classify camera frames and play sounds when class 0 is recognised.""")
-        exit(1)
 
     model_file = argv[1]
-    countdown = argv[2]
+    countdown = int(argv[2])
 
 
     # We use the same MobileNet as during recording to turn images into features
@@ -68,6 +65,14 @@ def main():
     smoothed = np.ones(classifier.output_shape[1:])
     smoothed /= len(smoothed)
     
+    # init logger
+    logger = logging.getLogger('bios-fish')
+    hdlr = logging.FileHandler('/home/pi/bios_fish/log.txt')
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    hdlr.setFormatter(formatter)
+    logger.addHandler(hdlr)
+    logger.setLevel(logging.INFO)
+
     print('Now running!')
     while countdown > 0 :
         raw_frame = camera.next_frame()
@@ -108,6 +113,7 @@ def main():
         # Show the class probabilities and selected class
         summary = 'Class %d [%s]' % (selected, ' '.join('%02.0f%%' % (99 * p) for p in smoothed))
         stderr.write('\r' + summary)
+        logger.info(summary)
 
         # Perform actions for selected class. In this case, play a sound from the sounds/ dir
 #        if selected == 0:
@@ -118,7 +124,6 @@ def main():
         # Show the image in a preview window so you can tell if you are in frame
         time.sleep(0.2)
         countdown = countdown - 1
-       
 
 
 if __name__ == '__main__':
